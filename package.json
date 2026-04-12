@@ -1,0 +1,46 @@
+{
+  "name": "linkedin-firefox-fixer",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Firefox extension that fixes broken text editing and other interactions on LinkedIn.",
+  "license": "MIT",
+  "author": "digitalby",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/digitalby/linkedin-firefox-fixer.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "clean": "rm -rf dist web-ext-artifacts",
+    "build": "node scripts/build.mjs",
+    "package": "npm run build && web-ext build --source-dir=dist --overwrite-dest",
+    "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\" --max-warnings=0",
+    "lint:ext": "web-ext lint --source-dir=dist --warnings-as-errors",
+    "format": "prettier --check \"src/**/*.{ts,html}\" \"tests/**/*.ts\"",
+    "format:fix": "prettier --write \"src/**/*.{ts,html}\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e:with": "playwright test tests/e2e/with-extension.spec.ts",
+    "e2e:without": "playwright test tests/e2e/without-extension.spec.ts",
+    "start:firefox": "web-ext run --source-dir=dist --start-url=https://www.linkedin.com/"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "@types/firefox-webext-browser": "120.0.4",
+    "@types/node": "22.10.5",
+    "@typescript-eslint/eslint-plugin": "8.20.0",
+    "@typescript-eslint/parser": "8.20.0",
+    "esbuild": "0.24.2",
+    "eslint": "9.18.0",
+    "eslint-config-prettier": "9.1.0",
+    "jsdom": "26.0.0",
+    "prettier": "3.4.2",
+    "typescript": "5.7.3",
+    "vitest": "2.1.8",
+    "web-ext": "8.3.0"
+  }
+}
