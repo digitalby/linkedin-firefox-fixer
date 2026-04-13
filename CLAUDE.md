@@ -97,6 +97,7 @@ Pure-function tests only. `src/content/lib/keys.ts` is the canonical example: cl
 - **IME composition**: always check `event.isComposing` and bail. Breaking CJK input in a LinkedIn fixer would be unforgivable.
 - **Firefox WebExtension typings**: use `@types/firefox-webext-browser`, not `@types/chrome`. The `browser.*` API is Promise-native on Firefox; do not polyfill.
 - **Pinned versions**: if you bump a dep, run the full suite locally before pushing. Do not iterate via remote CI.
+- **Persistent dev profile**: `web-ext.config.mjs` pins the `run` profile to `.firefox-profile/` in the repo root (gitignored) via `firefoxProfile` + `keepProfileChanges` + `profileCreateIfMissing`. This means the same cookie jar and device fingerprint survive across `npm run start:firefox` invocations — log in to LinkedIn once, stay logged in. Do NOT switch to a throwaway profile; repeated fresh logins trip LinkedIn's anomaly detection and burn through 2FA. If the profile ever needs a reset, delete `.firefox-profile/` and log in once more.
 
 ## Branches (gitflow)
 
