@@ -1,37 +1,64 @@
 import type { FixDisposable, FixModule } from '../../types/module.js';
 import { classifyEnter } from '../lib/keys.js';
 
-const COMPOSER_SELECTORS = [
-  '[contenteditable="true"][role="textbox"]',
-  '.msg-form__contenteditable',
-  '.ql-editor[contenteditable="true"]',
-];
-
-function isComposer(el: Element): el is HTMLElement {
-  if (!(el instanceof HTMLElement)) return false;
-  return COMPOSER_SELECTORS.some((sel) => el.matches(sel));
+interface Surface {
+  readonly selector: string;
+  readonly submitOnBareEnter: boolean;
 }
 
+const SURFACES: readonly Surface[] = [
+  { selector: '.msg-form__contenteditable', submitOnBareEnter: true },
+  { selector: '.comments-comment-box__editor', submitOnBareEnter: true },
+  { selector: '.share-creation-state .ql-editor', submitOnBareEnter: false },
+  { selector: '[contenteditable="true"][role="textbox"]', submitOnBareEnter: true },
+];
+
+function matchSurface(el: Element): Surface | null {
+  if (!(el instanceof HTMLElement)) return null;
+  for (const surface of SURFACES) {
+    if (el.matches(surface.selector)) return surface;
+  }
+  return null;
+}
+
+const ZWSP = '\u200B';
+
 function insertLineBreak(target: HTMLElement): void {
-  const selection = target.ownerDocument.getSelection();
+  const doc = target.ownerDocument;
+  const selection = doc.getSelection();
   if (!selection || selection.rangeCount === 0) return;
   const range = selection.getRangeAt(0);
+
+  const fragment = doc.createDocumentFragment();
+  const br = doc.createElement('br');
+  const caretAnchor = doc.createTextNode(ZWSP);
+  fragment.append(br, caretAnchor);
+
   range.deleteContents();
+  range.insertNode(fragment);
 
-  const br = target.ownerDocument.createElement('br');
-  range.insertNode(br);
-
-  const trailing = br.nextSibling;
-  if (!trailing || trailing.nodeName !== 'BR') {
-    const sentinel = target.ownerDocument.createElement('br');
-    br.after(sentinel);
-  }
-
-  const newRange = target.ownerDocument.createRange();
-  newRange.setStartAfter(br);
+  const newRange = doc.createRange();
+  newRange.setStart(caretAnchor, ZWSP.length);
   newRange.collapse(true);
   selection.removeAllRanges();
   selection.addRange(newRange);
+
+  const stripZwsp = (): void => {
+    if (caretAnchor.data.startsWith(ZWSP) && caretAnchor.data.length > ZWSP.length) {
+      const savedSelection = doc.getSelection();
+      const offset = savedSelection?.focusNode === caretAnchor ? savedSelection.focusOffset : null;
+      caretAnchor.data = caretAnchor.data.slice(ZWSP.length);
+      if (offset !== null && offset >= ZWSP.length) {
+        const restored = doc.createRange();
+        restored.setStart(caretAnchor, offset - ZWSP.length);
+        restored.collapse(true);
+        savedSelection?.removeAllRanges();
+        savedSelection?.addRange(restored);
+      }
+      target.removeEventListener('input', stripZwsp, true);
+    }
+  };
+  target.addEventListener('input', stripZwsp, true);
 
   target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertLineBreak' }));
 }
@@ -48,14 +75,15 @@ export const crlfFix: FixModule = {
     const onKeyDown = (event: KeyboardEvent): void => {
       const target = event.target;
       if (!(target instanceof Element)) return;
-      if (!isComposer(target)) return;
+      const surface = matchSurface(target);
+      if (!surface) return;
 
-      const intent = classifyEnter(event, false);
+      const intent = classifyEnter(event, surface.submitOnBareEnter);
       if (intent.kind !== 'newline') return;
 
       event.preventDefault();
       event.stopPropagation();
-      insertLineBreak(target);
+      insertLineBreak(target as HTMLElement);
     };
 
     root.addEventListener('keydown', onKeyDown, { capture: true });
