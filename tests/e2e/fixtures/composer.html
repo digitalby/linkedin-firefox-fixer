@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LinkedIn composer fixture</title>
+  </head>
+  <body>
+    <!--
+      Offline stand-in for a LinkedIn message composer. The .ql-editor element
+      matches the crlf fix's COMPOSER_SELECTORS. The bubble-phase keydown
+      handler below stands in for LinkedIn's own Quill handler: on Enter it
+      cancels the native line break (the bug the extension exists to fix) and
+      records that it ran. The crlf fix preempts it with a capture-phase
+      listener + stopPropagation; without the extension, it runs and the
+      composer stays single-line.
+    -->
+    <div class="msg-form__contenteditable">
+      <div id="composer" class="ql-editor" contenteditable="true" role="textbox"></div>
+    </div>
+    <div id="interference-marker"></div>
+    <script>
+      const editor = document.getElementById('composer');
+      const marker = document.getElementById('interference-marker');
+      editor.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        event.preventDefault();
+        marker.textContent = 'interfered';
+      });
+    </script>
+  </body>
+</html>
